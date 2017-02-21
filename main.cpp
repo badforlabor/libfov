@@ -13,20 +13,21 @@
 //#include <sys/time.h>
 //#include <fov/fov.h>
 #include "fov.h"
+#include "fov_wrapper.h"
 
 #define FOVRADIUS	100
 
 /* Global variables ----------------------------------------------- */
-
-MAP map(3);
-int pX = 25;
-int pY = 20;
-unsigned radius = 20;
-fov_direction_type direction = FOV_EAST;
-float angle = 130.0f;
-bool beam = false;
-bool apply_to_opaque = true;
-fov_settings_type fov_settings;
+CFovWrapper* GFovInst;
+// MAP map(3);
+// int pX = 25;
+// int pY = 20;
+// unsigned radius = 20;
+// fov_direction_type direction = FOV_EAST;
+// float angle = 130.0f;
+// bool beam = false;
+// bool apply_to_opaque = true;
+// fov_settings_type fov_settings;
 
 /* Callbacks ------------------------------------------------------ */
 
@@ -42,10 +43,10 @@ fov_settings_type fov_settings;
 * \param src Pointer to source data structure passed to function such
 *            as fov_circle.
 */
-void apply(void *map, int x, int y, int dx, int dy, void *src) {
-	if (((MAP *)map)->onMap(x, y))
-		((MAP *)map)->setSeen(x, y);
-}
+// void apply(void *map, int x, int y, int dx, int dy, void *src) {
+// 	if (((MAP *)map)->onMap(x, y))
+// 		((MAP *)map)->setSeen(x, y);
+// }
 
 
 /**
@@ -58,9 +59,9 @@ void apply(void *map, int x, int y, int dx, int dy, void *src) {
 * \param x   Absolute x-axis position of cell.
 * \param y   Absolute x-axis position of cell.
 */
-bool opaque(void *map, int x, int y) {
-	return ((MAP *)map)->blockLOS(x, y);
-}
+// bool opaque(void *map, int x, int y) {
+// 	return ((MAP *)map)->blockLOS(x, y);
+// }
 
 
 /* Functions ------------------------------------------------------ */
@@ -70,12 +71,24 @@ bool opaque(void *map, int x, int y) {
 * the player right one cell.
 */
 void player_move(int dx, int dy) {
-	unsigned newx = pX + dx;
-	unsigned newy = pY + dy;
-	if (map.onMap(newx, newy)) {
-		pX = newx;
-		pY = newy;
-	}
+	GFovInst->PlayerMove(dx, dy);
+}
+void SetDirection(fov_direction_type dir)
+{
+	GFovInst->SetDirection(dir);
+}
+void IncreaseView(int delta)
+{
+	GFovInst->IncreaseView(delta);
+}
+void IncreaseAngle(int delta)
+{
+	GFovInst->IncreaseAngle(delta);
+}
+void ChangeShape(fov_shape_type shape)
+{
+	//fov_settings_set_shape(&fov_settings, shape);
+	GFovInst->ChangeShape(shape);
 }
 
 
@@ -101,15 +114,9 @@ void redraw(void) {
 	* and you would have to extract this colour from your data
 	* structure in each call to apply.
 	*/
-	if (beam) {
-		fov_beam(&fov_settings, &map, NULL, pX, pY, radius, direction, angle);
-	}
-	else {
-		fov_circle(&fov_settings, &map, NULL, pX, pY, radius);
-	}
 
-	map.display();
-	display_put_char('@', pX, pY, 0x00, 0xFF, 0x00);
+	GFovInst->Draw();
+
 	display_refresh();
 }
 
@@ -118,7 +125,10 @@ void redraw(void) {
 */
 void normal_exit(void) {
 	display_exit();
-	fov_settings_free(&fov_settings);
+
+	delete GFovInst;
+	GFovInst = NULL;
+
 	exit(0);
 }
 
@@ -153,93 +163,98 @@ void keypressed(int key, int shift) {
 	switch (key) {
 	case KEY_UP:
 	case KEY_KP8:
-		if (!beam || direction == FOV_NORTH)
+		//if (!beam || direction == FOV_NORTH)
 			player_move(0, -1);
-		direction = FOV_NORTH;
+		SetDirection(FOV_NORTH);
 		break;
 	case KEY_KP2:
 	case KEY_DOWN:
-		if (!beam || direction == FOV_SOUTH)
+		//if (!beam || direction == FOV_SOUTH)
 			player_move(0, 1);
-		direction = FOV_SOUTH;
+		SetDirection(FOV_SOUTH);
 		break;
 	case KEY_KP4:
 	case KEY_LEFT:
-		if (!beam || direction == FOV_WEST)
+		//if (!beam || direction == FOV_WEST)
 			player_move(-1, 0);
-		direction = FOV_WEST;
+		SetDirection(FOV_WEST);
 		break;
 	case KEY_KP6:
 	case KEY_RIGHT:
-		if (!beam || direction == FOV_EAST)
+		//if (!beam || direction == FOV_EAST)
 			player_move(1, 0);
-		direction = FOV_EAST;
+		SetDirection(FOV_EAST);
 		break;
 	case KEY_KP7:
-		if (!beam || direction == FOV_NORTHWEST)
+		//if (!beam || direction == FOV_NORTHWEST)
 			player_move(-1, -1);
-		direction = FOV_NORTHWEST;
+		SetDirection(FOV_NORTHWEST);
 		break;
 	case KEY_KP9:
-		if (!beam || direction == FOV_NORTHEAST)
+		//if (!beam || direction == FOV_NORTHEAST)
 			player_move(1, -1);
-		direction = FOV_NORTHEAST;
+		SetDirection(FOV_NORTHEAST);
 		break;
 	case KEY_KP1:
-		if (!beam || direction == FOV_SOUTHWEST)
+		//if (!beam || direction == FOV_SOUTHWEST)
 			player_move(-1, 1);
-		direction = FOV_SOUTHWEST;
+		SetDirection(FOV_SOUTHWEST);
 		break;
 	case KEY_KP3:
-		if (!beam || direction == FOV_SOUTHEAST)
+		//if (!beam || direction == FOV_SOUTHEAST)
 			player_move(1, 1);
-		direction = FOV_SOUTHEAST;
+		SetDirection(FOV_SOUTHEAST);
 		break;
 	case KEY_EQUALS:
-		radius++;
-		printf("Increased radius to %d\n", radius);
+		//radius++;
+		IncreaseView(1);
+		//printf("Increased radius to %d\n", radius);
 		break;
 	case KEY_MINUS:
-		radius--;
-		if (radius <= 0)
-			radius = 1;
-		printf("Decreased radius to %d\n", radius);
+// 		radius--;
+// 		if (radius <= 0)
+// 			radius = 1;
+		IncreaseView(-1);
+		//printf("Decreased radius to %d\n", radius);
 		break;
 	case KEY_RIGHTBRACKET:
-		angle += 5.0;
-		if (angle >= 360.0f)
-			angle = 360.0f;
-		printf("Increased angle to %0.1f\n", angle);
+// 		angle += 5.0;
+// 		if (angle >= 360.0f)
+// 			angle = 360.0f;
+		IncreaseAngle(5);
+		//printf("Increased angle to %0.1f\n", angle);
 		break;
 	case KEY_LEFTBRACKET:
-		angle -= 5.0;
-		if (angle <= 0.0f)
-			angle = 0.0f;
-		printf("Decreased angle to %0.1f\n", angle);
+// 		angle -= 5.0;
+// 		if (angle <= 0.0f)
+// 			angle = 0.0f;
+		IncreaseAngle(-5);
+		//printf("Decreased angle to %0.1f\n", angle);
 		break;
 	case KEY_p:
-		fov_settings_set_shape(&fov_settings, FOV_SHAPE_CIRCLE_PRECALCULATE);
+		ChangeShape(FOV_SHAPE_CIRCLE_PRECALCULATE);
 		printf("Precalculated circular limit\n");
 		break;
 	case KEY_c:
-		fov_settings_set_shape(&fov_settings, FOV_SHAPE_CIRCLE);
+		ChangeShape(FOV_SHAPE_CIRCLE);
 		printf("Circular limit\n");
 		break;
 	case KEY_s:
-		fov_settings_set_shape(&fov_settings, FOV_SHAPE_SQUARE);
+		ChangeShape(FOV_SHAPE_SQUARE);
 		printf("Square limit\n");
 		break;
 	case KEY_o:
-		fov_settings_set_shape(&fov_settings, FOV_SHAPE_OCTAGON);
+		ChangeShape(FOV_SHAPE_OCTAGON);
 		printf("Octagonal limit\n");
 		break;
 	case KEY_a:
-		fov_settings_set_opaque_apply(&fov_settings, (fov_opaque_apply_type)(!fov_settings.opaque_apply));
-		printf("Toggling applying to opaque tiles (%d)\n", fov_settings.opaque_apply);
+		//fov_settings_set_opaque_apply(&fov_settings, (fov_opaque_apply_type)(!fov_settings.opaque_apply));
+		//printf("Toggling applying to opaque tiles (%d)\n", fov_settings.opaque_apply);
 		break;
 	case KEY_b:
-		beam = !beam;
-		printf("Toggling beam (%d)\n", beam);
+		//beam = !beam;
+		GFovInst->ToggleBeam();
+		//printf("Toggling beam (%d)\n", beam);
 		break;
 	case KEY_h:
 	case KEY_SLASH:
@@ -261,16 +276,16 @@ void keypressed(int key, int shift) {
 */
 int main1()
 {
-	fov_settings_init(&fov_settings);
-	fov_settings_set_opacity_test_function(&fov_settings, opaque);
-	fov_settings_set_apply_lighting_function(&fov_settings, apply);
-
+	GFovInst = CreateFovInstance();
+	
 	display_init();
 	redraw();
 	display_event_loop(keypressed);
 	normal_exit();
 	return 0;
 }
+
+
 int _stdcall
 WinMain (struct HINSTANCE__ *hInstance,
 struct HINSTANCE__ *hPrevInstance,

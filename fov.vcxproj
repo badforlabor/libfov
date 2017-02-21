@@ -83,6 +83,7 @@
     <ClCompile Include="examples\display_sdl.c" />
     <ClCompile Include="examples\map.cc" />
     <ClCompile Include="fov\fov.c" />
+    <ClCompile Include="fov_wrapper.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -90,6 +91,7 @@
     <ClInclude Include="examples\display_sdl.h" />
     <ClInclude Include="examples\map.h" />
     <ClInclude Include="fov\fov.h" />
+    <ClInclude Include="fov_wrapper.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

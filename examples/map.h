@@ -7,8 +7,6 @@
 #ifndef MAP_H
 #define MAP_H
 
-#include "display.h"
-
 #define MAPWIDTH	80
 #define MAPHEIGHT	40
 

@@ -27,6 +27,9 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="fov_wrapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="fov\fov.h">
@@ -40,6 +43,9 @@
     </ClInclude>
     <ClInclude Include="examples\map.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="fov_wrapper.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

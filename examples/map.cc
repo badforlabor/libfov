@@ -13,6 +13,7 @@
  */
 
 #include "map.h"
+#include "display.h"
 #include <cstdlib>
 
 MAP::MAP(unsigned seed)
