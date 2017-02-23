@@ -275,7 +275,7 @@ static float fov_slope(float dx, float dy) {
         }                                                                                       \
     }
 
-FOV_DEFINE_OCTANT(+,+,x,y,p,p,n,true,true)
+//FOV_DEFINE_OCTANT(+,+,x,y,p,p,n,true,true)
 FOV_DEFINE_OCTANT(+,+,y,x,p,p,y,true,false)
 FOV_DEFINE_OCTANT(+,-,x,y,p,m,n,false,true)
 FOV_DEFINE_OCTANT(+,-,y,x,p,m,y,false,false)
@@ -283,6 +283,92 @@ FOV_DEFINE_OCTANT(-,+,x,y,m,p,n,true,true)
 FOV_DEFINE_OCTANT(-,+,y,x,m,p,y,true,false)
 FOV_DEFINE_OCTANT(-,-,x,y,m,m,n,false,true)
 FOV_DEFINE_OCTANT(-,-,y,x,m,m,y,false,false)
+
+
+static void fov_octant_ppn(
+	fov_private_data_type *data,
+	int dx,
+	float start_slope,
+	float end_slope) 
+{
+	int x, y, dy, dy0, dy1;
+	unsigned h;
+	int prev_blocked = -1;
+	float end_slope_next;
+	fov_settings_type *settings = data->settings;
+
+	if (dx == 0) {
+		fov_octant_ppn(data, dx + 1, start_slope, end_slope);
+		return;
+	}
+	else if ((unsigned)dx > data->radius) {
+		return;
+	}
+
+	dy0 = (int)(0.5f + ((float)dx)*start_slope);
+	dy1 = (int)(0.5f + ((float)dx)*end_slope);
+
+	x = data->source_x + dx;
+	y = data->source_y + dy0;
+
+	if (!true && dy1 == dx) {
+		/* We do diagonal lines on evey second octant, so they don't get done twice. */
+		--dy1;
+	}
+
+	switch (settings->shape) {
+	case FOV_SHAPE_CIRCLE_PRECALCULATE:
+		h = height(settings, dx, data->radius);
+		break;
+	case FOV_SHAPE_CIRCLE:
+		h = (unsigned)sqrtf((float)(data->radius*data->radius - dx*dx));
+		break;
+	case FOV_SHAPE_OCTAGON:
+		h = (data->radius - dx) << 1;
+		break;
+	default:
+		h = data->radius;
+		break;
+	};
+	if ((unsigned)dy1 > h) {
+		if (h == 0) {
+			return;
+		}
+		dy1 = (int)h;
+	}
+
+	/*fprintf(stderr, "(%2d) = [%2d .. %2d] (%f .. %f), h=%d,edge=%dn",
+	dx, dy0, dy1, ((float)dx)*start_slope,
+	0.5f + ((float)dx)*end_slope, h, true);*/
+
+	for (dy = dy0; dy <= dy1; ++dy) {
+		y = data->source_y + dy;
+
+		if (settings->opaque(data->map, x, y)) {
+			if (settings->opaque_apply == FOV_OPAQUE_APPLY && (true || dy > 0)) {
+				settings->apply(data->map, x, y, x - data->source_x, y - data->source_y, data->source);
+			}
+			if (prev_blocked == 0) {
+				end_slope_next = fov_slope((float)dx + 0.5f, (float)dy - 0.5f);
+				fov_octant_ppn(data, dx + 1, start_slope, end_slope_next);
+			}
+			prev_blocked = 1;
+		}
+		else {
+			if (true || dy > 0) {
+				settings->apply(data->map, x, y, x - data->source_x, y - data->source_y, data->source);
+			}
+			if (prev_blocked == 1) {
+				start_slope = fov_slope((float)dx - 0.5f, (float)dy - 0.5f);
+			}
+			prev_blocked = 0;
+		}
+	}
+
+	if (prev_blocked == 0) {
+		fov_octant_ppn(data, dx + 1, start_slope, end_slope);
+	}
+}
 
 
 /* Circle --------------------------------------------------------- */
